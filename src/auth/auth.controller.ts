@@ -10,8 +10,8 @@ export class AuthController {
 
   @Post('login')
   async login(@Body() loginData: LoginDto) {
-    const { username, password } = loginData;
-    const user = await this.authService.validateUser(username, password);
+    const { email, password } = loginData;
+    const user = await this.authService.validateUser(email, password);
 
     if (!user) {
       throw new NotFoundException('Invalid username/email or password');
@@ -23,6 +23,6 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() newUser: RegisterDto) {
-    return this.authService.register(newUser);
+    return this.authService.register(newUser),{message: 'register successful'};
   }
 }

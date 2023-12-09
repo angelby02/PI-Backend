@@ -14,8 +14,8 @@ export class User {
 
   @Column()
   password: string;
-    static _id: any;
-    name: any;
 
+  @Column()
+  roles: string;
 
 }
