@@ -1,40 +1,76 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import { User } from 'src/auth/user.entity';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Profile } from './profile.entity';
+import { createProfileDto } from './dto/create-profile.dto';
 
 @Injectable()
 export class UsersService {
-  private users = [];
+  constructor(@InjectRepository(User)private userRepository:Repository<User>,
+              @InjectRepository(Profile)private profileRepository:Repository<Profile>){}
 
-  findAll(): any[] {
-    return [this.users];
-  }
-
-  findOne(id: number): any {
-    return this.users.find(user => user.id === id);
-  }
-
-  create(userDto: CreateUserDto): any {
-    const newUser = { id: this.users.length + 1, ...userDto };
-    this.users.push(newUser);
-    return newUser;
-  }
-
-  update(id: number, updateUserDto: UpdateUserDto): any {
-    const userIndex = this.users.findIndex(user => user.id === id);
-    if (userIndex !== -1) {
-      this.users[userIndex] = { ...this.users[userIndex], ...updateUserDto };
-      return this.users[userIndex];
+  async createUser(user: CreateUserDto){
+    const userFound= await this.userRepository.findOne({
+      where:{
+        username:user.username
+      }
+    })
+    if(userFound){
+      return new HttpException('User already exist', 400)
     }
-    return null;
+
+    const newUser = this.userRepository.create(user)
+    return this.userRepository.save(newUser)
+  }
+  getUsers(){
+    return this.userRepository.find()
+  }
+  async getUser(id:number){
+    const userFound = await this.userRepository.findOne({
+      where:{
+        id
+      }
+    })
+    if(!userFound){
+      return new HttpException('User not found', 400)
+    }
+    return userFound;
+  }
+  async deleteUser(id:number){
+    const result= await this.userRepository.delete({id});
+    if(result.affected === 0){
+      return new HttpException('User not found',400)
+    }
+    return result;
   }
 
-  remove(id: number): any {
-    const userIndex = this.users.findIndex(user => user.id === id);
-    if (userIndex !== -1) {
-      const deletedUser = this.users[userIndex];
-      this.users.splice(userIndex, 1);
-      return deletedUser;
+  async updateUser(id:number, user:UpdateUserDto){
+    const userFound= await this.userRepository.findOne({
+      where:{
+        id,
+      }
+    })
+    if(!userFound){
+      return new HttpException('User not Found', 400)
     }
-    return null;
+    const updateUser = Object.assign(userFound, user);
+    return this.userRepository.save(updateUser);
   }
+
+
+  async createProfile(id: number, profile:createProfileDto){
+    const userFound= await this.userRepository.findOne({
+      where:{id,}
+    })
+    if (!userFound){
+      return new HttpException('User not found', 400)
+    }
+    const newProfile=this.profileRepository.create(profile)
+    const savedProfile = await this.profileRepository.save(newProfile)
+    userFound.profile = savedProfile
+    return this.userRepository.save(userFound)
+  }
+  
 }
